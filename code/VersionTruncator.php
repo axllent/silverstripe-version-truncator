@@ -46,9 +46,9 @@ class VersionTruncator extends SiteTreeExtension {
 
 		if ($version_limit) {
 			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
-				 WHERE RecordID = ' . $ID  . ' AND ClassName = \'' . $className . '\'
-				 AND PublisherID > 0
-				 ORDER BY LastEdited DESC LIMIT ' . $version_limit .', 200');
+				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" = \'' . $className . '\'
+				 AND "PublisherID" > 0
+				 ORDER BY "LastEdited" DESC LIMIT ' . $version_limit .', 200');
 			foreach ($search as $row)
 				array_push($versionsToDelete, array('RecordID' => $row['RecordID'], 'Version' => $row['Version']));
 		}
@@ -57,16 +57,16 @@ class VersionTruncator extends SiteTreeExtension {
 
 		if ($draft_limit) {
 			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
-				 WHERE RecordID = ' . $ID  . ' AND ClassName = \'' . $className . '\'
-				 AND PublisherID = 0
-				 ORDER BY LastEdited DESC LIMIT ' . $draft_limit .', 200');
+				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" = \'' . $className . '\'
+				 AND "PublisherID" = 0
+				 ORDER BY "LastEdited" DESC LIMIT ' . $draft_limit .', 200');
 			foreach ($search as $row)
 				array_push($versionsToDelete, array('RecordID' => $row['RecordID'], 'Version' => $row['Version']));
 		}
 
 		if (self::$delete_old_page_types) {
 			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
-				 WHERE RecordID = ' . $ID  . ' AND ClassName != \'' . $className . '\'');
+				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" != \'' . $className . '\'');
 			foreach ($search as $row)
 				array_push($versionsToDelete, array('RecordID' => $row['RecordID'], 'Version' => $row['Version']));
 		}
@@ -104,10 +104,10 @@ class VersionTruncator extends SiteTreeExtension {
 
 			foreach ($tables as $table) {
 				if (preg_match('/mysql/i', $databaseConfig['type']))
-					DB::query('OPTIMIZE table ' . $table);
+					DB::query('OPTIMIZE table "' . $table . '"');
 
 				else if (preg_match('/postgres/i', $databaseConfig['type']))
-					DB::query('VACUUM ' . $table);
+					DB::query('VACUUM "' . $table . '"');
 			}
 			/* Sqlite just optimizes the database, not each table */
 			if (preg_match('/sqlite/i', $databaseConfig['type']))

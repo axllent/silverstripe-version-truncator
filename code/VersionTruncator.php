@@ -16,10 +16,10 @@
 
 class VersionTruncator extends SiteTreeExtension {
 
-	protected static $version_limit = false;
+	protected static $version_limit = 10;
 		static function set_version_limit($v) {self::$version_limit = $v;}
 
-	protected static $draft_limit = false;
+	protected static $draft_limit = 5;
 		static function set_draft_limit($v) {self::$draft_limit = $v;}
 
 	protected static $vacuum_tables = false;

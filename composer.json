@@ -1,0 +1,24 @@
+{
+	"name": "axllent/silverstripe-version-truncator",
+	"description": "Automatically delete old SiteTree page versions from SilverStripe 3",
+	"type": "silverstripe-module",
+	"homepage": "https://github.com/axllent/silverstripe-version-truncator",
+	"keywords": [
+		"silverstripe",
+		"cms",
+		"sitetree"
+	],
+	"license": "The MIT License (MIT)",
+	"authors": [
+		{
+			"name": "Ralph Slooten",
+			"homepage": "http://www.axllent.org/"
+		}
+	],
+	"support": {
+		"issues": "https://github.com/axllent/silverstripe-version-truncator/issues"
+	},
+	"require": {
+		"silverstripe/framework": "3.*"
+	}
+}

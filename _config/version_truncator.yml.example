@@ -1,0 +1,5 @@
+VersionTruncator:
+  version_limit: 10 #Default false
+  draft_limit: 5 #Default same as version_limit
+  delete_old_page_types: true #defaul is false
+  vacuum_tables: true #default is false

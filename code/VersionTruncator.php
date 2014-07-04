@@ -6,9 +6,7 @@
  * A SilerStripe extension to automatically delete old published & draft
  * versions from all classes extending the SiteTree (like Page) upon save.
  *
- * If set (eg: VersionTruncator::set_limit(20); in your _config.php)
- * the class will automatically delete all but the latest (edited) 20 versions
- * of the page once saved.
+ * Please refer to the README.md for confirguration options.
  *
  * License: MIT-style license http://opensource.org/licenses/MIT
  * Authors: Techno Joy development team (www.technojoy.co.nz)
@@ -16,17 +14,13 @@
 
 class VersionTruncator extends SiteTreeExtension {
 
-	protected static $version_limit = 10;
-		static function set_version_limit($v) {self::$version_limit = $v;}
+	private static $version_limit = 10;
 
-	protected static $draft_limit = 5;
-		static function set_draft_limit($v) {self::$draft_limit = $v;}
+	private static $draft_limit = 5;
 
-	protected static $vacuum_tables = false;
-		static function set_vacuum_tables($v) {self::$vacuum_tables = $v;}
+	private static $vacuum_tables = false;
 
-	protected static $delete_old_page_types = false;
-		static function set_delete_old_page_types($v) {self::$delete_old_page_types = $v;}
+	private static $delete_old_page_types = false;
 
 	/*
 	 * Automatically invoked with any save() on a SiteTree object
@@ -42,9 +36,11 @@ class VersionTruncator extends SiteTreeExtension {
 		$subClasses = ClassInfo::dataClassesFor($className);
 		$versionsToDelete = array();
 
-		$version_limit = (self::$version_limit && is_numeric(self::$version_limit)) ? self::$version_limit : false;
+		$version_limit = Config::inst()->get('VersionTruncator', 'version_limit');
 
-		if ($version_limit) {
+		die('Version limit = ' . $version_limit);
+
+		if (is_numeric($version_limit)) {
 			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
 				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" = \'' . $className . '\'
 				 AND "PublisherID" > 0
@@ -53,9 +49,9 @@ class VersionTruncator extends SiteTreeExtension {
 				array_push($versionsToDelete, array('RecordID' => $row['RecordID'], 'Version' => $row['Version']));
 		}
 
-		$draft_limit = (self::$draft_limit && is_numeric(self::$draft_limit)) ? self::$draft_limit : $version_limit;
+		$draft_limit = Config::inst()->get('VersionTruncator', 'draft_limit');
 
-		if ($draft_limit) {
+		if (is_numeric($draft_limit)) {
 			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
 				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" = \'' . $className . '\'
 				 AND "PublisherID" = 0
@@ -64,7 +60,9 @@ class VersionTruncator extends SiteTreeExtension {
 				array_push($versionsToDelete, array('RecordID' => $row['RecordID'], 'Version' => $row['Version']));
 		}
 
-		if (self::$delete_old_page_types) {
+		$delete_old_page_types = Config::inst()->get('VersionTruncator', 'delete_old_page_types');
+
+		if ($delete_old_page_types) {
 			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
 				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" != \'' . $className . '\'');
 			foreach ($search as $row)
@@ -97,22 +95,51 @@ class VersionTruncator extends SiteTreeExtension {
 	 */
 	protected function vacuumTables($raw_tables) {
 
+		$vacuum_tables = Config::inst()->get('VersionTruncator', 'vacuum_tables');
+
 		$tables = array_unique($raw_tables);
 
-		if (self::$vacuum_tables && count($tables) > 0) {
+		if ($vacuum_tables && count($tables) > 0) {
 			global $databaseConfig;
 
 			foreach ($tables as $table) {
-				if (preg_match('/mysql/i', $databaseConfig['type']))
+				if (preg_match('/mysql/i', $databaseConfig['type'])) {
 					DB::query('OPTIMIZE table "' . $table . '"');
+				}
 
-				else if (preg_match('/postgres/i', $databaseConfig['type']))
+				else if (preg_match('/postgres/i', $databaseConfig['type'])) {
 					DB::query('VACUUM "' . $table . '"');
+				}
 			}
 			/* Sqlite just optimizes the database, not each table */
-			if (preg_match('/sqlite/i', $databaseConfig['type']))
+			if (preg_match('/sqlite/i', $databaseConfig['type'])) {
 				DB::query('VACUUM');
+			}
 		}
+	}
+
+
+	/*
+	 * Warnings for older configs
+	 */
+	static function set_version_limit($v) {
+		Deprecation::notice('3.0', 'VersionTruncator::set_version_limit() is deprecated.');
+		Config::inst()->update('VersionTruncator', 'version_limit', $v);
+	}
+
+	static function set_draft_limit($v) {
+		Deprecation::notice('3.0', 'VersionTruncator::set_draft_limit() is deprecated.');
+		Config::inst()->update('VersionTruncator', 'draft_limit', $v);
+	}
+
+	static function set_vacuum_tables($v) {
+		Deprecation::notice('3.0', 'VersionTruncator::set_vacuum_tables() is deprecated.');
+		Config::inst()->update('VersionTruncator', 'vacuum_tables', $v);
+	}
+
+	static function set_delete_old_page_types($v) {
+		Deprecation::notice('3.0', 'VersionTruncator::set_delete_old_page_types() is deprecated.');
+		Config::inst()->update('VersionTruncator', 'delete_old_page_types', $v);
 	}
 
 }

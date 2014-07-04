@@ -1,0 +1,9 @@
+---
+Name: version_truncator
+Before: 'mysite/*'
+After: 'framework/*','cms/*'
+---
+
+SiteTree:
+  extensions:
+    - VersionTruncator

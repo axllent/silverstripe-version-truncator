@@ -120,22 +120,22 @@ class VersionTruncator extends SiteTreeExtension {
 	/*
 	 * Warnings for older configs
 	 */
-	static function set_version_limit($v) {
+	public static function set_version_limit($v) {
 		Deprecation::notice('3.0', 'VersionTruncator::set_version_limit() is deprecated.');
 		Config::inst()->update('VersionTruncator', 'version_limit', $v);
 	}
 
-	static function set_draft_limit($v) {
+	public static function set_draft_limit($v) {
 		Deprecation::notice('3.0', 'VersionTruncator::set_draft_limit() is deprecated.');
 		Config::inst()->update('VersionTruncator', 'draft_limit', $v);
 	}
 
-	static function set_vacuum_tables($v) {
+	public static function set_vacuum_tables($v) {
 		Deprecation::notice('3.0', 'VersionTruncator::set_vacuum_tables() is deprecated.');
 		Config::inst()->update('VersionTruncator', 'vacuum_tables', $v);
 	}
 
-	static function set_delete_old_page_types($v) {
+	public static function set_delete_old_page_types($v) {
 		Deprecation::notice('3.0', 'VersionTruncator::set_delete_old_page_types() is deprecated.');
 		Config::inst()->update('VersionTruncator', 'delete_old_page_types', $v);
 	}

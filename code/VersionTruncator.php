@@ -38,8 +38,6 @@ class VersionTruncator extends SiteTreeExtension {
 
 		$version_limit = Config::inst()->get('VersionTruncator', 'version_limit');
 
-		die('Version limit = ' . $version_limit);
-
 		if (is_numeric($version_limit)) {
 			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
 				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" = \'' . $className . '\'

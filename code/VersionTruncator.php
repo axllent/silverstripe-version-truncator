@@ -30,6 +30,16 @@ class VersionTruncator extends SiteTreeExtension {
 	public function onAfterWrite() {
 
 		parent::onAfterWrite();
+		$this->truncateVersions();
+
+	}
+
+	/*
+	 * Remove old versions on a SiteTree object
+	 * @param null
+	 * @return int (number of records deleted)
+	 */
+	public function truncateVersions() {
 
 		$ID = $this->owner->ID;
 		$className = $this->owner->ClassName;
@@ -99,7 +109,11 @@ class VersionTruncator extends SiteTreeExtension {
 			}
 
 			$this->vacuumTables($affected_tables);
+			
+			return count($versionsToDelete);
 		}
+		
+		return false;
 
 	}
 

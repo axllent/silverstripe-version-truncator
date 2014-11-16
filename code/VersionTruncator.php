@@ -30,18 +30,45 @@ class VersionTruncator extends SiteTreeExtension {
 	public function onAfterWrite() {
 
 		parent::onAfterWrite();
+		$this->truncateVersions();
+
+	}
+
+	/*
+	 * Remove old versions on a SiteTree object
+	 * @param null
+	 * @return int (number of records deleted)
+	 */
+	public function truncateVersions() {
 
 		$ID = $this->owner->ID;
 		$className = $this->owner->ClassName;
 		$subClasses = ClassInfo::dataClassesFor($className);
 		$versionsToDelete = array();
+		$protectedIDs = array();
+		$excludeWhere = '';
 
 		$version_limit = Config::inst()->get('VersionTruncator', 'version_limit');
 
 		if (is_numeric($version_limit)) {
-			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
+			
+			//Preserve URL History for automatic 301 redirects
+			$exclude = DB::query('SELECT *  FROM (SELECT "ID", "RecordID", "URLSegment" FROM "SiteTree_versions"
 				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" = \'' . $className . '\'
 				 AND "PublisherID" > 0
+				 ORDER BY "LastEdited" DESC) c
+				 GROUP BY "URLSegment"');
+			foreach ($exclude as $row) {
+				$protectedIDs[] = $row['ID'];
+			}
+			if (!empty($protectedIDs)) {
+				$excludeWhere = implode(',', $protectedIDs);
+				$excludeWhere =' AND "ID" NOT IN (' . $excludeWhere . ')';
+			}
+			
+			$search = DB::query('SELECT "RecordID", "Version" FROM "SiteTree_versions"
+				 WHERE "RecordID" = ' . $ID  . ' AND "ClassName" = \'' . $className . '\'
+				 AND "PublisherID" > 0 ' . $excludeWhere . '
 				 ORDER BY "LastEdited" DESC LIMIT ' . $version_limit .', 200');
 			foreach ($search as $row)
 				array_push($versionsToDelete, array('RecordID' => $row['RecordID'], 'Version' => $row['Version']));
@@ -82,7 +109,11 @@ class VersionTruncator extends SiteTreeExtension {
 			}
 
 			$this->vacuumTables($affected_tables);
+			
+			return count($versionsToDelete);
 		}
+		
+		return false;
 
 	}
 

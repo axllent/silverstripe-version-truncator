@@ -8,4 +8,4 @@ After:
 
 SilverStripe\CMS\Model\SiteTree:
   extensions:
-    - Axllent\VersionTruncator\SiteTreeTruncator
+    - Axllent\VersionTruncator\SiteTreeVersionTruncator

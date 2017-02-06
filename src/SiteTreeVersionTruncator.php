@@ -6,8 +6,8 @@ use Axllent\VersionTruncator\VersionTruncator;
 use SilverStripe\CMS\Model\SiteTreeExtension;
 
 /**
- * Version Truncator for SilverStripe
- * ==================================
+ * SiteTree Version Truncator for SilverStripe
+ * ===========================================
  *
  * A SilerStripe extension to automatically delete old published & draft
  * versions from all classes extending the SiteTree (like Page) upon save/publish.
@@ -18,7 +18,7 @@ use SilverStripe\CMS\Model\SiteTreeExtension;
  * Authors: Techno Joy development team (www.technojoy.co.nz)
  */
 
-class SiteTreeTruncator extends SiteTreeExtension
+class SiteTreeVersionTruncator extends SiteTreeExtension
 {
 
     /*

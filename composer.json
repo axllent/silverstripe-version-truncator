@@ -19,6 +19,11 @@
 		"issues": "https://github.com/axllent/silverstripe-version-truncator/issues"
 	},
 	"require": {
-		"silverstripe/framework": "3.*"
-	}
+		"silverstripe/framework": "^4.0@dev"
+	},
+    "autoload": {
+        "psr-4": {
+            "Axllent\\VersionTruncator\\": "src/"
+        }
+    }
 }

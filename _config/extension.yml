@@ -1,9 +1,11 @@
 ---
-Name: version_truncator
+Name: versiontruncator
 Before: 'mysite/*'
-After: 'framework/*','cms/*'
+After:
+  - 'framework/*'
+  - 'cms/*'
 ---
 
-SiteTree:
+SilverStripe\CMS\Model\SiteTree:
   extensions:
-    - VersionTruncator
+    - Axllent\VersionTruncator\SiteTreeTruncator

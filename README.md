@@ -16,6 +16,7 @@ It works for any page extending the SiteTree model, and includes all child model
 ## Tasks
 
 The module adds two manual tasks to:
+
 1. Force a run over the entire database
 2. Force a "reset", keeping only the latest published version of each currently published page.
 

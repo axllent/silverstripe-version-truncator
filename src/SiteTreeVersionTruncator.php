@@ -22,7 +22,7 @@ class SiteTreeVersionTruncator extends SiteTreeExtension
 {
 
     /*
-     * Automatically invoked with any save() on a SiteTree object
+     * Automatically invoked after every write() on a SiteTree object
      * @param null
      * @return null
      */

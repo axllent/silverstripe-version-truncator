@@ -1,9 +1,6 @@
 ---
 Name: versiontruncator
 Before: 'mysite/*'
-After:
-  - 'framework/*'
-  - 'cms/*'
 ---
 
 SilverStripe\CMS\Model\SiteTree:

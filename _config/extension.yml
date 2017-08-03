@@ -1,8 +1,6 @@
 ---
 Name: versiontruncator
-Before: 'mysite/*'
 ---
-
 SilverStripe\CMS\Model\SiteTree:
   extensions:
     - Axllent\VersionTruncator\SiteTreeVersionTruncator

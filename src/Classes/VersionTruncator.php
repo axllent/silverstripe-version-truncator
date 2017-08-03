@@ -12,6 +12,30 @@ use SilverStripe\CMS\Model\SiteTree;
 
 class VersionTruncator
 {
+    /**
+     * @Config
+     * How many published versions to keep
+     */
+    private static $keep_versions = 10;
+
+    /**
+     * @Config
+     * How many draft versions to keep
+     */
+    private static $keep_drafts = 5;
+
+    /**
+     * @Config
+     * Keep page versions that have a different URLSegment (for redirects)
+     */
+    private static $keep_redirects = true;
+
+    /**
+     * @Config
+     * Keep page versions where page type (ClassName) has changed
+     */
+    private static $keep_old_page_types = false;
+
 
     public static function pruneByID($RecordID)
     {

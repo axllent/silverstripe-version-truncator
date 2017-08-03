@@ -1,5 +1,0 @@
-Axllent\VersionTruncator\VersionTruncator:
-  keep_versions: 10           # how many (published) versions of each page to keep
-  keep_drafts: 5              # how many drafts of each page to keep
-  keep_redirects: true        # keep page versions that have a different URLSegment (for redirects)
-  keep_old_page_types: false  # keep page versions where page type (ClassName) has changed

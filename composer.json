@@ -1,7 +1,7 @@
 {
 	"name": "axllent/silverstripe-version-truncator",
 	"description": "Automatically delete old SiteTree page versions from SilverStripe",
-	"type": "silverstripe-module",
+	"type": "silverstripe-vendormodule",
 	"homepage": "https://github.com/axllent/silverstripe-version-truncator",
 	"keywords": [
 		"silverstripe",
@@ -19,7 +19,7 @@
 		"issues": "https://github.com/axllent/silverstripe-version-truncator/issues"
 	},
 	"require": {
-		"silverstripe/framework": "^4.0@dev"
+		"silverstripe/framework": "^4.0"
 	},
     "autoload": {
         "psr-4": {

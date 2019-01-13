@@ -36,13 +36,18 @@ class VersionTruncator
      */
     private static $keep_old_page_types = false;
 
-
+    /**
+     * Prune SiteTree by ID
+     *
+     * @param  Int
+     * @return Int
+     */
     public static function pruneByID($RecordID)
     {
-        $keep_versions = Config::inst()->get('Axllent\VersionTruncator\VersionTruncator', 'keep_versions');
-        $keep_drafts = Config::inst()->get('Axllent\VersionTruncator\VersionTruncator', 'keep_drafts');
-        $keep_redirects = Config::inst()->get('Axllent\VersionTruncator\VersionTruncator', 'keep_redirects');
-        $keep_old_page_types = Config::inst()->get('Axllent\VersionTruncator\VersionTruncator', 'keep_old_page_types');
+        $keep_versions = Config::inst()->get(VersionTruncator::class, 'keep_versions');
+        $keep_drafts = Config::inst()->get(VersionTruncator::class, 'keep_drafts');
+        $keep_redirects = Config::inst()->get(VersionTruncator::class, 'keep_redirects');
+        $keep_old_page_types = Config::inst()->get(VersionTruncator::class, 'keep_old_page_types');
 
         $query = new SQLSelect();
         $query->setFrom('SiteTree_Versions');

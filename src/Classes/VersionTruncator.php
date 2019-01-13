@@ -2,13 +2,12 @@
 
 namespace Axllent\VersionTruncator;
 
-use SilverStripe\Core\Config\Config;
-use SilverStripe\Dev\Debug;
-use SilverStripe\ORM\Queries\SQLSelect;
-use SilverStripe\ORM\DB;
-use SilverStripe\Core\ClassInfo;
-use SilverStripe\ORM\DataObjectSchema;
 use SilverStripe\CMS\Model\SiteTree;
+use SilverStripe\Core\ClassInfo;
+use SilverStripe\Core\Config\Config;
+use SilverStripe\ORM\DataObjectSchema;
+use SilverStripe\ORM\DB;
+use SilverStripe\ORM\Queries\SQLSelect;
 
 class VersionTruncator
 {
@@ -71,34 +70,34 @@ class VersionTruncator
 
             $live_version = SiteTree::get()->byID($row['RecordID']);
 
-            if (// automatically delete versions of old page types
+            if ( // automatically delete versions of old page types
                 !$keep_old_page_types &&
                 $live_version &&
                 $live_version->ClassName != $ClassName
             ) {
-                array_push($versionsToDelete, array(
-                    'RecordID' => $RecordID,
-                    'Version' => $Version,
-                    'ClassName' => $ClassName
-                ));
+                array_push($versionsToDelete, [
+                    'RecordID'  => $RecordID,
+                    'Version'   => $Version,
+                    'ClassName' => $ClassName,
+                ]);
             } elseif (!$WasPublished && $keep_drafts) { // draft
                 $draftCount++;
                 if ($draftCount > $keep_drafts) {
-                    array_push($versionsToDelete, array(
-                        'RecordID' => $RecordID,
-                        'Version' => $Version,
-                        'ClassName' => $ClassName
-                    ));
+                    array_push($versionsToDelete, [
+                        'RecordID'  => $RecordID,
+                        'Version'   => $Version,
+                        'ClassName' => $ClassName,
+                    ]);
                 }
             } elseif ($keep_versions) { // published
                 $publishedCount++;
                 if ($publishedCount > $keep_versions) {
                     if (!$keep_redirects || in_array($URLSegment, $seen_url_segments)) {
-                        array_push($versionsToDelete, array(
-                            'RecordID' => $RecordID,
-                            'Version' => $Version,
-                            'ClassName' => $ClassName
-                        ));
+                        array_push($versionsToDelete, [
+                            'RecordID'  => $RecordID,
+                            'Version'   => $Version,
+                            'ClassName' => $ClassName,
+                        ]);
                     }
                 }
                 // add page to "seen URLs" if $preserve_redirects
@@ -112,7 +111,7 @@ class VersionTruncator
 
         if (count($versionsToDelete) > 0) {
             $table_list = DB::table_list();
-            $affected_tables = array();
+            $affected_tables = [];
             $doschema = new DataObjectSchema();
             foreach ($versionsToDelete as $d) {
                 $subclasses = ClassInfo::dataClassesFor($d['ClassName']);
@@ -130,6 +129,12 @@ class VersionTruncator
         return $affected_rows;
     }
 
+    /**
+     * Remove ALL previous versions of a SiteTree record
+     *
+     * @param  Null
+     * @return Int
+     */
     public static function deleteAllButLive()
     {
         $query = new SQLSelect();
@@ -155,11 +160,11 @@ class VersionTruncator
             $is_live = $query->execute()->value();
 
             if (!$is_live) {
-                array_push($versionsToDelete, array(
-                    'RecordID' => $RecordID,
-                    'Version' => $Version,
-                    'ClassName' => $ClassName
-                ));
+                array_push($versionsToDelete, [
+                    'RecordID'  => $RecordID,
+                    'Version'   => $Version,
+                    'ClassName' => $ClassName,
+                ]);
             }
         }
 
@@ -167,7 +172,7 @@ class VersionTruncator
 
         if (count($versionsToDelete) > 0) {
             $table_list = DB::table_list();
-            $affected_tables = array();
+            $affected_tables = [];
             $doschema = new DataObjectSchema();
             foreach ($versionsToDelete as $d) {
                 $subclasses = ClassInfo::dataClassesFor($d['ClassName']);

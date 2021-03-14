@@ -1,26 +1,30 @@
 {
-	"name": "axllent/silverstripe-version-truncator",
-	"description": "Automatically delete old SiteTree page versions from SilverStripe",
-	"type": "silverstripe-vendormodule",
-	"homepage": "https://github.com/axllent/silverstripe-version-truncator",
-	"keywords": [
-		"silverstripe",
-		"cms",
-		"sitetree"
-	],
-	"license": "MIT",
-	"authors": [
-		{
-			"name": "Ralph Slooten",
-			"homepage": "http://www.axllent.org/"
-		}
-	],
-	"support": {
-		"issues": "https://github.com/axllent/silverstripe-version-truncator/issues"
-	},
-	"require": {
-		"silverstripe/framework": "^4.0"
-	},
+    "name": "axllent/silverstripe-version-truncator",
+    "description": "Automatically delete old versioned Silverstripe records from the database",
+    "type": "silverstripe-vendormodule",
+    "homepage": "https://github.com/axllent/silverstripe-version-truncator",
+    "keywords": [
+        "silverstripe",
+        "framework",
+        "sitetree",
+        "dataobject",
+        "database",
+        "performance",
+        "versioned"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ralph Slooten",
+            "homepage": "https://www.axllent.org/"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/axllent/silverstripe-version-truncator/issues"
+    },
+    "require": {
+        "silverstripe/framework": "^4.5"
+    },
     "autoload": {
         "psr-4": {
             "Axllent\\VersionTruncator\\": "src/"

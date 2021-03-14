@@ -2,6 +2,14 @@
 
 Notable changes to this project will be documented in this file.
 
+## [dev]
+
+- Major rewrite, breaking changes - support for all versioned DataObjects
+- Deletion policy per class type (and extending classes)
+- Prune only on `onPublish()` to simplify and reduce overheads
+- Modify tasks
+
+
 ## [2.0.3]
 
 - Switch to silverstripe-vendormodule

@@ -2,7 +2,7 @@
 
 Notable changes to this project will be documented in this file.
 
-## [dev]
+## [3.0.0]
 
 - Major rewrite, breaking changes - support for all versioned DataObjects
 - Deletion policy per class type (and extending classes)

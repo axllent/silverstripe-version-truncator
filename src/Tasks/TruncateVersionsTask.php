@@ -121,6 +121,11 @@ class TruncateVersionsTask extends BuildTask
             $deleted = 0;
 
             foreach ($records as $r) {
+                // check if stages are present
+                if (!$r->hasStages()) {
+                    continue;
+                }
+
                 if ($r->isLiveVersion()) {
                     $deleted += $r->doVersionCleanup();
                 }

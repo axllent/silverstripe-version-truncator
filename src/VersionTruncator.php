@@ -7,6 +7,7 @@ use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
+use SilverStripe\Versioned\Versioned;
 
 class VersionTruncator extends DataExtension
 {
@@ -39,6 +40,19 @@ class VersionTruncator extends DataExtension
      */
     public function doVersionCleanup()
     {
+        $oldMode = Versioned::get_reading_mode();
+        if ($oldMode != 'Stage.Stage') {
+            Versioned::set_reading_mode('Stage.Stage');
+        }
+        $has_stages = $this->owner->hasStages();
+        if ($oldMode != 'Stage.Stage') {
+            Versioned::set_reading_mode($oldMode);
+        }
+
+        if (!$has_stages) {
+            return;
+        }
+
         // array of version IDs to delete
         $to_delete = [];
 

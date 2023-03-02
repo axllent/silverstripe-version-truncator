@@ -1,4 +1,5 @@
 <?php
+
 namespace Axllent\VersionTruncator;
 
 use SilverStripe\Core\Config\Config;
@@ -16,7 +17,7 @@ class VersionTruncator extends DataExtension
      *
      * @var mixed
      */
-    private $_conf = false;
+    private $conf = false;
 
     /**
      * Runs after a versioned dataobject is published.
@@ -25,12 +26,24 @@ class VersionTruncator extends DataExtension
      */
     public function onAfterPublish()
     {
-        if (!$this->_config('keep_versions')) {
+        if (!$this->config('keep_versions')) {
             // skip this dataobject
             return;
         }
 
-        $this->doVersionCleanup();
+        $oldMode = Versioned::get_reading_mode();
+        if ('Stage.Stage' != $oldMode) {
+            Versioned::set_reading_mode('Stage.Stage');
+        }
+
+        $has_stages = $this->owner->hasStages();
+        if ($has_stages) {
+            $this->doVersionCleanup();
+        }
+
+        if ('Stage.Stage' != $oldMode) {
+            Versioned::set_reading_mode($oldMode);
+        }
     }
 
     /**
@@ -40,19 +53,6 @@ class VersionTruncator extends DataExtension
      */
     public function doVersionCleanup()
     {
-        $oldMode = Versioned::get_reading_mode();
-        if ($oldMode != 'Stage.Stage') {
-            Versioned::set_reading_mode('Stage.Stage');
-        }
-        $has_stages = $this->owner->hasStages();
-        if ($oldMode != 'Stage.Stage') {
-            Versioned::set_reading_mode($oldMode);
-        }
-
-        if (!$has_stages) {
-            return;
-        }
-
         // array of version IDs to delete
         $to_delete = [];
 
@@ -61,7 +61,7 @@ class VersionTruncator extends DataExtension
 
         $total_deleted = 0;
 
-        $keep_versions = $this->_config('keep_versions');
+        $keep_versions = $this->config('keep_versions');
         if (is_int($keep_versions) && $keep_versions > 0) {
             $query = new SQLSelect();
             $query->setSelect(['ID', 'Version', 'LastEdited']);
@@ -72,7 +72,7 @@ class VersionTruncator extends DataExtension
                     '"WasPublished" = ?' => 1,
                 ]
             );
-            if ($baseTable == 'SiteTree' && $this->_config('keep_redirects')) {
+            if ('SiteTree' == $baseTable && $this->config('keep_redirects')) {
                 $query->addWhere(
                     [
                         '"URLSegment" = ?' => $this->owner->URLSegment,
@@ -89,8 +89,8 @@ class VersionTruncator extends DataExtension
                 array_push($to_delete, $result['Version']);
             }
 
-            if ($baseTable == 'SiteTree'
-                && $this->_config('keep_redirects')
+            if ('SiteTree' == $baseTable
+                && $this->config('keep_redirects')
             ) {
                 // Get the most recent Version IDs of all published pages to ensure
                 // we leave at least X versions even if a URLSegment or ParentID
@@ -125,8 +125,8 @@ class VersionTruncator extends DataExtension
                 $query->setFrom($baseTable . '_Versions');
                 $query->addWhere(
                     [
-                        '"RecordID" = ?'                       => $this->owner->ID,
-                        '"WasPublished" = ?'                   => 1,
+                        '"RecordID" = ?'     => $this->owner->ID,
+                        '"WasPublished" = ?' => 1,
                         '"Version" NOT IN (' . implode(',', $to_keep) . ')',
                         '"URLSegment" != ? OR "ParentID" != ?' => [
                             $this->owner->URLSegment,
@@ -154,7 +154,7 @@ class VersionTruncator extends DataExtension
             }
         }
 
-        $keep_drafts = $this->_config('keep_drafts');
+        $keep_drafts = $this->config('keep_drafts');
 
         // remove drafts keeping `keep_drafts`
         if (is_int($keep_drafts)) {
@@ -166,7 +166,7 @@ class VersionTruncator extends DataExtension
                 'WasPublished = 0'
             );
             $query->setOrderBy('LastEdited DESC, ID DESC');
-            $query->setLimit(100, $this->_config('keep_drafts'));
+            $query->setLimit(100, $this->config('keep_drafts'));
 
             $results = $query->execute();
 
@@ -212,13 +212,13 @@ class VersionTruncator extends DataExtension
      *
      * @return mixed
      */
-    private function _config(string $key)
+    private function config(string $key)
     {
-        if (!$this->_conf) {
-            $this->_conf = Config::inst();
+        if (!$this->conf) {
+            $this->conf = Config::inst();
         }
 
-        return $this->_conf->get(
+        return $this->conf->get(
             $this->owner->ClassName,
             $key
         );

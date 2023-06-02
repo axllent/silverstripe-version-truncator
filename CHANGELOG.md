@@ -2,6 +2,13 @@
 
 Notable changes to this project will be documented in this file.
 
+## [3.0.1]
+
+- Support for Silverstripe 5
+- Ensure versioned object hasStages()
+- Move set_reading_mode() to onAfterPublish()
+
+
 ## [3.0.0]
 
 - Major rewrite, breaking changes - support for all versioned DataObjects

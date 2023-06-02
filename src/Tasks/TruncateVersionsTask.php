@@ -1,4 +1,5 @@
 <?php
+
 namespace Axllent\VersionTruncator\Tasks;
 
 use Axllent\VersionTruncator\VersionTruncator;
@@ -95,11 +96,11 @@ class TruncateVersionsTask extends BuildTask
         $files = $request->getVar('files');
 
         if ($reset) {
-            $this->_reset();
+            $this->reset();
         } elseif ($prune) {
-            $this->_prune();
+            $this->prune();
         } elseif ($files) {
-            $this->_pruneDeletedFileVersions();
+            $this->pruneDeletedFileVersions();
         }
     }
 
@@ -108,7 +109,7 @@ class TruncateVersionsTask extends BuildTask
      *
      * @return void
      */
-    private function _prune()
+    private function prune()
     {
         $classes = $this->_getAllVersionedDataClasses();
 
@@ -148,7 +149,7 @@ class TruncateVersionsTask extends BuildTask
      *
      * @return HTTPResponse
      */
-    private function _pruneDeletedFileVersions()
+    private function pruneDeletedFileVersions()
     {
         DB::alteration_message('Pruning all deleted File DataObjects');
 
@@ -192,7 +193,7 @@ class TruncateVersionsTask extends BuildTask
      *
      * @return HTTPResponse
      */
-    private function _reset()
+    private function reset()
     {
         DB::alteration_message('Pruning all published records');
 
@@ -225,7 +226,7 @@ class TruncateVersionsTask extends BuildTask
 
         DB::alteration_message('Completed, pruned ' . $total . ' records');
 
-        $this->_pruneDeletedFileVersions();
+        $this->pruneDeletedFileVersions();
     }
 
     /**

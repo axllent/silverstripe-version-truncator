@@ -25,7 +25,7 @@ The tasks can be run via `/dev/tasks/TruncateVersionsTask`.
 
 ## Requirements
 
-* Silverstripe 4+
+* Silverstripe ^4.5 || ^5.0
 
 
 ## Installation

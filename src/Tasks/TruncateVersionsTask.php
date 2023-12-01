@@ -63,12 +63,12 @@ class TruncateVersionsTask extends BuildTask
                     <li>
                         <p>
                             <a href="?files=1">Prune deleted files</a>
-                            - Deleted all versions of deleted files.
+                            - Delete all versions of deleted files.
                         </p>
                     </li>
                     <li>
                         <p>
-                            <a href="?reset=1" onclick="return Confirm()">Reset all</a>
+                            <a href="?reset=1" onclick="return Confirm(`WARNING!!!\nPlease confirm you wish to delete ALL historical versions for all versioned DataObjects?`)">Reset all</a>
                             - This prunes ALL previous versions for all published versioned
                             DataObjects, keeping only the latest single <strong>published</strong>
                             version.<br />
@@ -77,12 +77,16 @@ class TruncateVersionsTask extends BuildTask
                             including those that have drafts are not modified.
                         </p>
                     </li>
+                    <li>
+                    <p>
+                        <a href="?delete=1" onclick="return Confirm(`WARNING!!!\nPlease confirm you wish to delete All Archived Pages?`)">Delete Archived Pages</a>
+                        - Delete All Archived Pages.
+                    </p>
+                </li>
                 </ul>
                 <script type="text/javascript">
                     function Confirm(q) {
-                        var question = "WARNING: Please confirm you wish to delete ALL historical " +
-                        "versions for all versioned DataObjects?";
-                        if (confirm(question)) {
+                        if (confirm(q)) {
                             return true;
                         }
                         return false;
@@ -94,6 +98,7 @@ class TruncateVersionsTask extends BuildTask
         $reset = $request->getVar('reset');
         $prune = $request->getVar('prune');
         $files = $request->getVar('files');
+        $delete = $request->getVar('delete');
 
         if ($reset) {
             $this->reset();
@@ -101,6 +106,8 @@ class TruncateVersionsTask extends BuildTask
             $this->prune();
         } elseif ($files) {
             $this->pruneDeletedFileVersions();
+        } elseif ($delete) {
+            $this->deleteArchivedPages();
         }
     }
 
@@ -228,6 +235,60 @@ class TruncateVersionsTask extends BuildTask
 
         $this->pruneDeletedFileVersions();
     }
+
+    /**
+     * Delete All Archived Pages
+     *
+     * @return void
+     */
+    private function deleteArchivedPages()
+    {        
+        DB::alteration_message('Deleting All Archived Pages');
+
+        $count = 0;
+
+        $classes = $this->_getAllVersionedDataClasses();
+        foreach ($classes as $class) {
+
+            $singleton = singleton($class);
+            $list = $singleton->get();
+            $baseTable = $singleton->baseTable();
+    
+            $list = $list->setDataQueryParam('Versioned.mode', 'latest_versions');
+    
+            $draftTable = $baseTable . '_Draft';
+            $list = $list
+                ->leftJoin(
+                    $draftTable,
+                    "\"{$baseTable}\".\"ID\" = \"{$draftTable}\".\"ID\""
+                );
+    
+            if ($singleton->hasStages()) {
+                $liveTable = $baseTable . '_Live';
+                $list = $list->leftJoin(
+                    $liveTable,
+                    "\"{$baseTable}\".\"ID\" = \"{$liveTable}\".\"ID\""
+                );
+            }
+    
+            $list = $list->where("\"{$draftTable}\".\"ID\" IS NULL");
+    
+            foreach ($list as $rec) {
+                $deleteSQL = sprintf(
+                    'DELETE FROM "SiteTree_Versions"
+                        WHERE "RecordID" = %s',
+                    $rec->ID
+                );
+                DB::query($deleteSQL);
+
+                DB::alteration_message("Deleted Page: $rec->Title, ID: $rec->ID, LastEdited: $rec->LastEdited, Versions: $rec->Version");
+                $count++;
+            }
+        }
+       
+        DB::alteration_message("Completed, Deleted $count Archived Pages");
+    }
+
 
     /**
      * Get all versioned database classes

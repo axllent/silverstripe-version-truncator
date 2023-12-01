@@ -1,310 +1,226 @@
 <?php
 
-namespace Axllent\VersionTruncator\Tasks;
+namespace Axllent\VersionTruncator;
 
-use Axllent\VersionTruncator\VersionTruncator;
-use SilverStripe\CMS\Model\SiteTree;
-use SilverStripe\Control\Director;
-use SilverStripe\Core\ClassInfo;
-use SilverStripe\Dev\BuildTask;
+use SilverStripe\Core\Config\Config;
+use SilverStripe\ORM\DataExtension;
+use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Versioned\Versioned;
 
-/**
- * Prunes the database of old SiteTree versions & drafts
- */
-class TruncateVersionsTask extends BuildTask
+class VersionTruncator extends DataExtension
 {
     /**
-     * URL segment
+     * Cached Config::inst()
      *
-     * @var string
+     * @var mixed
      */
-    private static $segment = 'TruncateVersionsTask';
+    private $conf = false;
 
     /**
-     * Task title
-     *
-     * @var string
-     */
-    protected $title = 'Prune old DataObject versions';
-
-    /**
-     * Task description
-     *
-     * @var string
-     */
-    protected $description = 'Delete old versioned DataObject versions from the database';
-
-    /**
-     * Run task
-     *
-     * @param HTTPRequest $request HTTP request
-     *
-     * @return HTTPResponse
-     */
-    public function run($request)
-    {
-        if (!Director::is_cli()) {
-            print '<h3>Select a task:</h3>
-                <p>You do not normally need to run these tasks, as pruning is run automatically
-                whenever a versioned DataObject is published.</p>
-                <ul>
-                    <li>
-                        <p>
-                            <a href="?prune=1">Prune all</a>
-                            - Prune all published versioned DataObjects according to your policies.
-                            This is normally not required as pruning is done automatically when any
-                            versioned record is published.
-                        </p>
-                    </li>
-                    <li>
-                        <p>
-                            <a href="?files=1">Prune deleted files</a>
-                            - Delete all versions of deleted files.
-                        </p>
-                    </li>
-                    <li>
-                        <p>
-                            <a href="?reset=1" onclick="return Confirm(`WARNING!!!\nPlease confirm you wish to delete ALL historical versions for all versioned DataObjects?`)">Reset all</a>
-                            - This prunes ALL previous versions for all published versioned
-                            DataObjects, keeping only the latest single <strong>published</strong>
-                            version.<br />
-                            This deletes all references to old pages, drafts, and previous
-                            pages with different URLSegments (redirects). Unpublished DataObjects,
-                            including those that have drafts are not modified.
-                        </p>
-                    </li>
-                    <li>
-                    <p>
-                        <a href="?delete=1" onclick="return Confirm(`WARNING!!!\nPlease confirm you wish to delete All Archived Pages?`)">Delete Archived Pages</a>
-                        - Delete All Archived Pages.
-                    </p>
-                </li>
-                </ul>
-                <script type="text/javascript">
-                    function Confirm(q) {
-                        if (confirm(q)) {
-                            return true;
-                        }
-                        return false;
-                    }
-                </script>
-            ';
-        }
-
-        $reset = $request->getVar('reset');
-        $prune = $request->getVar('prune');
-        $files = $request->getVar('files');
-        $delete = $request->getVar('delete');
-
-        if ($reset) {
-            $this->reset();
-        } elseif ($prune) {
-            $this->prune();
-        } elseif ($files) {
-            $this->pruneDeletedFileVersions();
-        } elseif ($delete) {
-            $this->deleteArchivedPages();
-        }
-    }
-
-    /**
-     * Prune all published DataObjects which are published according to config
+     * Runs after a versioned dataobject is published.
      *
      * @return void
      */
-    private function prune()
+    public function onAfterPublish()
     {
-        $classes = $this->_getAllVersionedDataClasses();
-
-        DB::alteration_message('Pruning all DataObjects');
-
-        $total = 0;
-
-        foreach ($classes as $class) {
-            $records = Versioned::get_by_stage($class, Versioned::DRAFT);
-            $deleted = 0;
-
-            foreach ($records as $r) {
-                // check if stages are present
-                if (!$r->hasStages()) {
-                    continue;
-                }
-
-                if ($r->isLiveVersion()) {
-                    $deleted += $r->doVersionCleanup();
-                }
-            }
-
-            if ($deleted > 0) {
-                DB::alteration_message(
-                    'Deleted ' . $deleted . ' versioned ' . $class . ' records'
-                );
-
-                $total += $deleted;
-            }
-        }
-
-        DB::alteration_message('Completed, pruned ' . $total . ' records');
-    }
-
-    /**
-     * Prune versions of deleted files/folders
-     *
-     * @return HTTPResponse
-     */
-    private function pruneDeletedFileVersions()
-    {
-        DB::alteration_message('Pruning all deleted File DataObjects');
-
-        $query = new SQLSelect();
-        $query->setSelect(['RecordID']);
-        $query->setFrom('File_Versions');
-        $query->addWhere(
-            [
-                '"WasDeleted" = ?' => 1,
-            ]
-        );
-
-        $to_delete = [];
-
-        $results = $query->execute();
-
-        foreach ($results as $result) {
-            array_push($to_delete, $result['RecordID']);
-        }
-
-        if (!count($to_delete)) {
-            DB::alteration_message('Completed, pruned 0 File records');
-
+        if (!$this->config('keep_versions')) {
+            // skip this dataobject
             return;
         }
 
-        $deleteSQL = sprintf(
-            'DELETE FROM File_Versions WHERE "RecordID" IN (%s)',
-            implode(',', $to_delete)
-        );
+        $oldMode = Versioned::get_reading_mode();
+        if ('Stage.Stage' != $oldMode) {
+            Versioned::set_reading_mode('Stage.Stage');
+        }
 
-        DB::query($deleteSQL);
+        $has_stages = $this->owner->hasStages();
+        if ($has_stages) {
+            $this->doVersionCleanup();
+        }
 
-        $deleted = DB::affected_rows();
-
-        DB::alteration_message('Completed, pruned ' . $deleted . ' File records');
+        if ('Stage.Stage' != $oldMode) {
+            Versioned::set_reading_mode($oldMode);
+        }
     }
 
     /**
-     * Delete all previous records of published records
+     * Version cleanup
      *
-     * @return HTTPResponse
+     * @return int
      */
-    private function reset()
+    public function doVersionCleanup()
     {
-        DB::alteration_message('Pruning all published records');
+        // array of version IDs to delete
+        $to_delete = [];
 
-        $classes = $this->_getAllVersionedDataClasses();
+        // Base table has Versioned data
+        $baseTable = $this->owner->baseTable();
 
-        $total = 0;
+        $total_deleted = 0;
 
-        foreach ($classes as $class) {
-            $records = Versioned::get_by_stage($class, Versioned::DRAFT);
-            $deleted = 0;
+        $keep_versions = $this->config('keep_versions');
+        if (is_int($keep_versions) && $keep_versions > 0) {
+            $query = new SQLSelect();
+            $query->setSelect(['ID', 'Version', 'LastEdited']);
+            $query->setFrom($baseTable . '_Versions');
+            $query->addWhere(
+                [
+                    '"RecordID" = ?'     => $this->owner->ID,
+                    '"WasPublished" = ?' => 1,
+                ]
+            );
+            if ('SiteTree' == $baseTable && $this->config('keep_redirects')) {
+                $query->addWhere(
+                    [
+                        '"URLSegment" = ?' => $this->owner->URLSegment,
+                        '"ParentID" = ?'   => $this->owner->ParentID,
+                    ]
+                );
+            }
+            $query->setOrderBy('LastEdited DESC, ID DESC');
+            $query->setLimit(100, $keep_versions);
 
-            // set to minimum
-            $class::config()->set('keep_versions', 1);
-            $class::config()->set('keep_drafts', 0);
-            $class::config()->set('keep_redirects', false);
+            $results = $query->execute();
 
-            foreach ($records as $r) {
-                if ($r->isLiveVersion()) {
-                    $deleted += $r->doVersionCleanup();
+            foreach ($results as $result) {
+                array_push($to_delete, $result['Version']);
+            }
+
+            if ('SiteTree' == $baseTable
+                && $this->config('keep_redirects')
+            ) {
+                // Get the most recent Version IDs of all published pages to ensure
+                // we leave at least X versions even if a URLSegment or ParentID
+                // has changed.
+                $query = new SQLSelect();
+                $query->setSelect(
+                    ['Version', 'LastEdited']
+                );
+                $query->setFrom($baseTable . '_Versions');
+                $query->addWhere(
+                    [
+                        '"RecordID" = ?'     => $this->owner->ID,
+                        '"WasPublished" = ?' => 1,
+                    ]
+                );
+                $query->setOrderBy('LastEdited DESC');
+                $query->setLimit($keep_versions, 0);
+
+                $results = $query->execute();
+
+                $to_keep = [];
+                foreach ($results as $result) {
+                    array_push($to_keep, $result['Version']);
+                }
+
+                // only keep a single historical record of moved/renamed
+                // unless they within the `keep_versions` range
+                $query = new SQLSelect();
+                $query->setSelect(
+                    ['Version', 'LastEdited', 'URLSegment', 'ParentID']
+                );
+                $query->setFrom($baseTable . '_Versions');
+                $query->addWhere(
+                    [
+                        '"RecordID" = ?'     => $this->owner->ID,
+                        '"WasPublished" = ?' => 1,
+                        '"Version" NOT IN (' . implode(',', $to_keep) . ')',
+                        '"URLSegment" != ? OR "ParentID" != ?' => [
+                            $this->owner->URLSegment,
+                            $this->owner->ParentID,
+                        ],
+                    ]
+                );
+                $query->setOrderBy('LastEdited DESC');
+
+                $results = $query->execute();
+
+                $moved_pages = [];
+
+                // create a `ParentID - $URLSegment` array to keep only a single
+                // version of each for URL redirection
+                foreach ($results as $result) {
+                    $key = $result['ParentID'] . ' - ' . $result['URLSegment'];
+
+                    if (in_array($key, $moved_pages)) {
+                        array_push($to_delete, $result['Version']);
+                    } else {
+                        array_push($moved_pages, $key);
+                    }
                 }
             }
+        }
 
-            if ($deleted > 0) {
-                DB::alteration_message(
-                    'Deleted ' . $deleted . ' versioned ' . $class . ' records'
-                );
-                $total += $deleted;
+        $keep_drafts = $this->config('keep_drafts');
+
+        // remove drafts keeping `keep_drafts`
+        if (is_int($keep_drafts)) {
+            $query = new SQLSelect();
+            $query->setSelect(['ID', 'Version', 'LastEdited']);
+            $query->setFrom($baseTable . '_Versions');
+            $query->addWhere(
+                'RecordID = ' . $this->owner->ID,
+                'WasPublished = 0'
+            );
+            $query->setOrderBy('LastEdited DESC, ID DESC');
+            $query->setLimit(100, $this->config('keep_drafts'));
+
+            $results = $query->execute();
+
+            foreach ($results as $result) {
+                array_push($to_delete, $result['Version']);
             }
         }
 
-        DB::alteration_message('Completed, pruned ' . $total . ' records');
-
-        $this->pruneDeletedFileVersions();
-    }
-
-    /**
-     * Delete All Archived Pages
-     *
-     * @return void
-     */
-    private function deleteArchivedPages()
-    {        
-        DB::alteration_message('Deleting All Archived Pages');
-
-        $count = 0;
-
-        $classes = $this->_getAllVersionedDataClasses();
-        foreach ($classes as $class) {
-
-            $singleton = singleton($class);
-            $list = $singleton->get();
-            $baseTable = $singleton->baseTable();
-    
-            $list = $list->setDataQueryParam('Versioned.mode', 'latest_versions');
-    
-            $draftTable = $baseTable . '_Draft';
-            $list = $list
-                ->leftJoin(
-                    $draftTable,
-                    "\"{$baseTable}\".\"ID\" = \"{$draftTable}\".\"ID\""
-                );
-    
-            if ($singleton->hasStages()) {
-                $liveTable = $baseTable . '_Live';
-                $list = $list->leftJoin(
-                    $liveTable,
-                    "\"{$baseTable}\".\"ID\" = \"{$liveTable}\".\"ID\""
-                );
-            }
-    
-            $list = $list->where("\"{$draftTable}\".\"ID\" IS NULL");
-    
-            foreach ($list as $rec) {
-                $deleteSQL = sprintf(
-                    'DELETE FROM "SiteTree_Versions"
-                        WHERE "RecordID" = %s',
-                    $rec->ID
-                );
-                DB::query($deleteSQL);
-
-                DB::alteration_message("Deleted Page: $rec->Title, ID: $rec->ID, LastEdited: $rec->LastEdited, Versions: $rec->Version");
-                $count++;
-            }
+        if (!count($to_delete)) {
+            return;
         }
-       
-        DB::alteration_message("Completed, Deleted $count Archived Pages");
+
+        // Ugly (borrowed from DataObject::class), but returns all
+        // database tables relating to DataObject
+        $srcQuery = DataList::create($this->owner->ClassName)
+            ->filter('ID', $this->owner->ID)
+            ->dataQuery()
+            ->query();
+        $queriedTables = $srcQuery->queriedTables();
+
+        foreach ($queriedTables as $table) {
+            $delSQL = sprintf(
+                'DELETE FROM "%s_Versions"
+                    WHERE "Version" IN (%s)
+                    AND "RecordID" = %d',
+                $table,
+                implode(',', $to_delete),
+                $this->owner->ID
+            );
+
+            DB::query($delSQL);
+
+            $total_deleted += DB::affected_rows();
+        }
+
+        return $total_deleted;
     }
 
-
     /**
-     * Get all versioned database classes
+     * Return a config variable
      *
-     * @return array
+     * @param string $key Config key
+     *
+     * @return mixed
      */
-    private function _getAllVersionedDataClasses()
+    private function config(string $key)
     {
-        $all_classes       = ClassInfo::subclassesFor(DataObject::class);
-        $versioned_classes = [];
-        foreach ($all_classes as $c) {
-            if (DataObject::has_extension($c, Versioned::class)) {
-                array_push($versioned_classes, $c);
-            }
+        if (!$this->conf) {
+            $this->conf = Config::inst();
         }
 
-        return array_reverse($versioned_classes);
+        return $this->conf->get(
+            $this->owner->ClassName,
+            $key
+        );
     }
 }

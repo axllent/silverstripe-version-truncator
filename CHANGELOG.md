@@ -2,6 +2,11 @@
 
 Notable changes to this project will be documented in this file.
 
+## [3.1.0]
+
+- Add task option to delete all archived DataObjects
+
+
 ## [3.0.1]
 
 - Support for Silverstripe 5

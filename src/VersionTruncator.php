@@ -20,14 +20,14 @@ class VersionTruncator extends DataExtension
     private $conf = false;
 
     /**
-     * Runs after a versioned dataobject is published.
+     * Runs after a versioned DataObject is published.
      *
      * @return void
      */
     public function onAfterPublish()
     {
         if (!$this->config('keep_versions')) {
-            // skip this dataobject
+            // skip this DataObject
             return;
         }
 

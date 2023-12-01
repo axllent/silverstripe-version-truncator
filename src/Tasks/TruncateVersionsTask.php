@@ -2,8 +2,6 @@
 
 namespace Axllent\VersionTruncator\Tasks;
 
-use Axllent\VersionTruncator\VersionTruncator;
-use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Dev\BuildTask;
@@ -13,7 +11,7 @@ use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Versioned\Versioned;
 
 /**
- * Prunes the database of old SiteTree versions & drafts
+ * Prunes DataObject versions & drafts
  */
 class TruncateVersionsTask extends BuildTask
 {
@@ -48,7 +46,7 @@ class TruncateVersionsTask extends BuildTask
     public function run($request)
     {
         if (!Director::is_cli()) {
-            print '<h3>Select a task:</h3>
+            echo '<h3>Select a task:</h3>
                 <p>You do not normally need to run these tasks, as pruning is run automatically
                 whenever a versioned DataObject is published.</p>
                 <ul>
@@ -63,15 +61,14 @@ class TruncateVersionsTask extends BuildTask
                     <li>
                         <p>
                             <a href="?files=1">Prune deleted files</a>
-                            - Delete all versions of deleted files.
+                            - Delete all versions belonging to deleted files.
                         </p>
                     </li>
                     <li>
                         <p>
-                            <a href="?reset=1" onclick="return Confirm(`WARNING!!!\nPlease confirm you wish to delete ALL historical versions for all versioned DataObjects?`)">Reset all</a>
-                            - This prunes ALL previous versions for all published versioned
-                            DataObjects, keeping only the latest single <strong>published</strong>
-                            version.<br />
+                            <a href="?reset=1" onclick="return confirm(`WARNING!!!\nPlease confirm you wish to delete ALL historical versions for all versioned DataObjects?`)">Reset all</a>
+                            - This prunes ALL previous versions for published DataObjects, keeping only
+                            the latest single <strong>published</strong> version.<br />
                             This deletes all references to old pages, drafts, and previous
                             pages with different URLSegments (redirects). Unpublished DataObjects,
                             including those that have drafts are not modified.
@@ -79,26 +76,18 @@ class TruncateVersionsTask extends BuildTask
                     </li>
                     <li>
                     <p>
-                        <a href="?delete=1" onclick="return Confirm(`WARNING!!!\nPlease confirm you wish to delete All Archived Pages?`)">Delete Archived Pages</a>
-                        - Delete All Archived Pages.
+                        <a href="?archived=1" onclick="return confirm(`WARNING!!!\nPlease confirm you wish to delete ALL archived DataObjects?`)">Delete archived DataObjects</a>
+                        - Delete all <b>archived</b> DataObjects.
                     </p>
                 </li>
                 </ul>
-                <script type="text/javascript">
-                    function Confirm(q) {
-                        if (confirm(q)) {
-                            return true;
-                        }
-                        return false;
-                    }
-                </script>
             ';
         }
 
-        $reset = $request->getVar('reset');
-        $prune = $request->getVar('prune');
-        $files = $request->getVar('files');
-        $delete = $request->getVar('delete');
+        $reset    = $request->getVar('reset');
+        $prune    = $request->getVar('prune');
+        $files    = $request->getVar('files');
+        $archived = $request->getVar('archived');
 
         if ($reset) {
             $this->reset();
@@ -106,8 +95,8 @@ class TruncateVersionsTask extends BuildTask
             $this->prune();
         } elseif ($files) {
             $this->pruneDeletedFileVersions();
-        } elseif ($delete) {
-            $this->deleteArchivedPages();
+        } elseif ($archived) {
+            $this->deleteArchivedDataObjects();
         }
     }
 
@@ -118,7 +107,7 @@ class TruncateVersionsTask extends BuildTask
      */
     private function prune()
     {
-        $classes = $this->_getAllVersionedDataClasses();
+        $classes = $this->getAllVersionedDataClasses();
 
         DB::alteration_message('Pruning all DataObjects');
 
@@ -140,21 +129,19 @@ class TruncateVersionsTask extends BuildTask
             }
 
             if ($deleted > 0) {
-                DB::alteration_message(
-                    'Deleted ' . $deleted . ' versioned ' . $class . ' records'
-                );
+                DB::alteration_message("Deleted {$deleted} versioned {$class} records");
 
                 $total += $deleted;
             }
         }
 
-        DB::alteration_message('Completed, pruned ' . $total . ' records');
+        DB::alteration_message("Completed, pruned {$total} records");
     }
 
     /**
      * Prune versions of deleted files/folders
      *
-     * @return HTTPResponse
+     * @return void
      */
     private function pruneDeletedFileVersions()
     {
@@ -192,19 +179,19 @@ class TruncateVersionsTask extends BuildTask
 
         $deleted = DB::affected_rows();
 
-        DB::alteration_message('Completed, pruned ' . $deleted . ' File records');
+        DB::alteration_message("Completed, pruned {$deleted} File records");
     }
 
     /**
      * Delete all previous records of published records
      *
-     * @return HTTPResponse
+     * @return void
      */
     private function reset()
     {
         DB::alteration_message('Pruning all published records');
 
-        $classes = $this->_getAllVersionedDataClasses();
+        $classes = $this->getAllVersionedDataClasses();
 
         $total = 0;
 
@@ -224,78 +211,82 @@ class TruncateVersionsTask extends BuildTask
             }
 
             if ($deleted > 0) {
-                DB::alteration_message(
-                    'Deleted ' . $deleted . ' versioned ' . $class . ' records'
-                );
+                DB::alteration_message("Deleted {$deleted} versioned {$class} records");
                 $total += $deleted;
             }
         }
 
-        DB::alteration_message('Completed, pruned ' . $total . ' records');
+        DB::alteration_message("Completed, pruned {$total} records");
 
         $this->pruneDeletedFileVersions();
     }
 
     /**
-     * Delete All Archived Pages
+     * Delete All Archived DataObjects
      *
      * @return void
      */
-    private function deleteArchivedPages()
-    {        
-        DB::alteration_message('Deleting All Archived Pages');
+    private function deleteArchivedDataObjects()
+    {
+        $total = 0;
 
-        $count = 0;
+        DB::alteration_message('Deleting all archived DataObjects');
 
-        $classes = $this->_getAllVersionedDataClasses();
+        $classes = $this->getAllVersionedDataClasses();
+
         foreach ($classes as $class) {
-
             $singleton = singleton($class);
-            $list = $singleton->get();
+            $list      = $singleton->get();
             $baseTable = $singleton->baseTable();
-    
+
             $list = $list->setDataQueryParam('Versioned.mode', 'latest_versions');
-    
+
             $draftTable = $baseTable . '_Draft';
-            $list = $list
+            $list       = $list
                 ->leftJoin(
                     $draftTable,
                     "\"{$baseTable}\".\"ID\" = \"{$draftTable}\".\"ID\""
                 );
-    
+
             if ($singleton->hasStages()) {
                 $liveTable = $baseTable . '_Live';
-                $list = $list->leftJoin(
+                $list      = $list->leftJoin(
                     $liveTable,
                     "\"{$baseTable}\".\"ID\" = \"{$liveTable}\".\"ID\""
                 );
             }
-    
+
             $list = $list->where("\"{$draftTable}\".\"ID\" IS NULL");
-    
+
+            $deleted = 0;
+
             foreach ($list as $rec) {
                 $deleteSQL = sprintf(
-                    'DELETE FROM "SiteTree_Versions"
+                    'DELETE FROM "%s_Versions"
                         WHERE "RecordID" = %s',
+                    $baseTable,
                     $rec->ID
                 );
                 DB::query($deleteSQL);
 
-                DB::alteration_message("Deleted Page: $rec->Title, ID: $rec->ID, LastEdited: $rec->LastEdited, Versions: $rec->Version");
-                $count++;
+                ++$deleted;
+            }
+
+            if ($deleted > 0) {
+                DB::alteration_message("Deleted {$deleted} archived {$class} records");
+                $total += $deleted;
             }
         }
-       
-        DB::alteration_message("Completed, Deleted $count Archived Pages");
-    }
 
+        DB::alteration_message("Completed, deleted {$total} archived DataObjects");
+    }
 
     /**
      * Get all versioned database classes
      *
      * @return array
      */
-    private function _getAllVersionedDataClasses()
+    private function getAllVersionedDataClasses()
     {
         $all_classes       = ClassInfo::subclassesFor(DataObject::class);
         $versioned_classes = [];

@@ -19,6 +19,7 @@ The module adds three manual tasks to:
 1. Force a run over the entire database - this task is generally not needed unless you either just install the module and wish to tidy up, or change your DataObject configurations.
 2. Silverstripe does not currently delete any File records once the file had been physically deleted (probably due to the immediate post-delete functionality relating to internal file linking). I cannot see any purpose of keeping these records after this, so this task will remove all records pertaining to deleted files/folders.
 3. Force a "reset", keeping only the latest published version of each currently published DataObject (regardless of policy). Unpublished / modified DataObjects are not touched.
+4. Delete all archived DataObjects.
 
 The tasks can be run via `/dev/tasks/TruncateVersionsTask`.
 

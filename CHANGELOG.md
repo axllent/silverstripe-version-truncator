@@ -2,6 +2,11 @@
 
 Notable changes to this project will be documented in this file.
 
+## [3.1.1]
+
+- Replace deprecated DataExtension with Extension
+
+
 ## [3.1.0]
 
 - Add task option to delete all archived DataObjects

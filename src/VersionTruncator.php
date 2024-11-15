@@ -3,14 +3,14 @@
 namespace Axllent\VersionTruncator;
 
 use SilverStripe\Core\Config\Config;
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 use SilverStripe\ORM\DataList;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
 use SilverStripe\Versioned\Versioned;
 
-class VersionTruncator extends DataExtension
+class VersionTruncator extends Extension
 {
     /**
      * Cached Config::inst()

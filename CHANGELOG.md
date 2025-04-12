@@ -2,6 +2,11 @@
 
 Notable changes to this project will be documented in this file.
 
+## [4.0.0]
+
+- Support for Silverstripe 6
+
+
 ## [3.1.1]
 
 - Replace deprecated DataExtension with Extension

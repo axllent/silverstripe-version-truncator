@@ -29,12 +29,12 @@ or see `sake tasks:TruncateVersionsTask --help` for CLI options.
 
 * Silverstripe ^6.0
 
+Please see the `3` branch for Silverstripe 4 & 5 support.
+
 
 ## Installation
 
 `composer require axllent/silverstripe-version-truncator`
-
-Please see the `3` branch for Silverstripe 4 & 5.
 
 
 ## Configuration

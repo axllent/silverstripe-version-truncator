@@ -2,13 +2,16 @@
 
 namespace Axllent\VersionTruncator\Tasks;
 
-use SilverStripe\Control\Director;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Dev\BuildTask;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DB;
 use SilverStripe\ORM\Queries\SQLSelect;
+use SilverStripe\PolyExecution\PolyOutput;
 use SilverStripe\Versioned\Versioned;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 
 /**
  * Prunes DataObject versions & drafts
@@ -16,38 +19,40 @@ use SilverStripe\Versioned\Versioned;
 class TruncateVersionsTask extends BuildTask
 {
     /**
-     * URL segment
-     *
-     * @var string
+     * Command name
      */
-    private static $segment = 'TruncateVersionsTask';
+    protected static string $commandName = 'TruncateVersionsTask';
 
     /**
      * Task title
-     *
-     * @var string
      */
-    protected $title = 'Prune old DataObject versions';
+    protected string $title = 'Prune old DataObject versions';
 
     /**
      * Task description
-     *
-     * @var string
      */
-    protected $description = 'Delete old versioned DataObject versions from the database';
+    protected static string $description = 'Delete old versioned DataObject versions from the database';
 
     /**
-     * Run task
-     *
-     * @param HTTPRequest $request HTTP request
-     *
-     * @return HTTPResponse
+     * Execute task
      */
-    public function run($request)
+    protected function execute(InputInterface $input, PolyOutput $output): int
     {
-        if (!Director::is_cli()) {
-            echo '<h3>Select a task:</h3>
-                <p>You do not normally need to run these tasks, as pruning is run automatically
+        if ($input->getOption('prune')) {
+            $this->prune($output);
+        }
+        if ($input->getOption('files')) {
+            $this->pruneDeletedFileVersions($output);
+        }
+        if ($input->getOption('reset')) {
+            $this->reset($output);
+        }
+        if ($input->getOption('archived')) {
+            $this->deleteArchivedDataObjects($output);
+        }
+
+        $output->writeForHtml('<h3>Select a task:</h3>
+                    <p>You do not normally need to run these tasks, as pruning is run automatically
                 whenever a versioned DataObject is published.</p>
                 <ul>
                     <li>
@@ -66,7 +71,10 @@ class TruncateVersionsTask extends BuildTask
                     </li>
                     <li>
                         <p>
-                            <a href="?reset=1" onclick="return confirm(`WARNING!!!\nPlease confirm you wish to delete ALL historical versions for all versioned DataObjects?`)">Reset all</a>
+                            <a href="?reset=1"
+                                onclick="return confirm(`WARNING!!!\nPlease confirm you wish to delete ALL historical versions for all versioned DataObjects?`)">
+                                Reset all
+                            </a>
                             - This prunes ALL previous versions for published DataObjects, keeping only
                             the latest single <strong>published</strong> version.<br />
                             This deletes all references to old pages, drafts, and previous
@@ -76,28 +84,47 @@ class TruncateVersionsTask extends BuildTask
                     </li>
                     <li>
                     <p>
-                        <a href="?archived=1" onclick="return confirm(`WARNING!!!\nPlease confirm you wish to delete ALL archived DataObjects?`)">Delete archived DataObjects</a>
+                        <a href="?archived=1"
+                            onclick="return confirm(`WARNING!!!\nPlease confirm you wish to delete ALL archived DataObjects?`)">
+                                Delete archived DataObjects
+                            </a>
                         - Delete all <b>archived</b> DataObjects.
                     </p>
                 </li>
                 </ul>
-            ';
-        }
+            ', false);
 
-        $reset    = $request->getVar('reset');
-        $prune    = $request->getVar('prune');
-        $files    = $request->getVar('files');
-        $archived = $request->getVar('archived');
+        return Command::SUCCESS;
+    }
 
-        if ($reset) {
-            $this->reset();
-        } elseif ($prune) {
-            $this->prune();
-        } elseif ($files) {
-            $this->pruneDeletedFileVersions();
-        } elseif ($archived) {
-            $this->deleteArchivedDataObjects();
-        }
+    public function getOptions(): array
+    {
+        return [
+            new InputOption(
+                'prune',
+                null,
+                InputOption::VALUE_NONE,
+                'Prune all published versioned DataObjects according to your policies'
+            ),
+            new InputOption(
+                'files',
+                null,
+                InputOption::VALUE_NONE,
+                'Delete all versions belonging to deleted files'
+            ),
+            new InputOption(
+                'reset',
+                null,
+                InputOption::VALUE_NONE,
+                'Delete ALL historical versions for all versioned DataObjects'
+            ),
+            new InputOption(
+                'archived',
+                null,
+                InputOption::VALUE_NONE,
+                'Delete archived DataObjects'
+            ),
+        ];
     }
 
     /**
@@ -105,11 +132,11 @@ class TruncateVersionsTask extends BuildTask
      *
      * @return void
      */
-    private function prune()
+    private function prune(PolyOutput $output)
     {
         $classes = $this->getAllVersionedDataClasses();
 
-        DB::alteration_message('Pruning all DataObjects');
+        $output->writeln('Pruning all DataObjects');
 
         $total = 0;
 
@@ -129,13 +156,13 @@ class TruncateVersionsTask extends BuildTask
             }
 
             if ($deleted > 0) {
-                DB::alteration_message("Deleted {$deleted} versioned {$class} records");
+                $output->writeln("Deleted {$deleted} versioned {$class} records");
 
                 $total += $deleted;
             }
         }
 
-        DB::alteration_message("Completed, pruned {$total} records");
+        $output->writeln("Completed, pruned {$total} records");
     }
 
     /**
@@ -143,9 +170,9 @@ class TruncateVersionsTask extends BuildTask
      *
      * @return void
      */
-    private function pruneDeletedFileVersions()
+    private function pruneDeletedFileVersions(PolyOutput $output)
     {
-        DB::alteration_message('Pruning all deleted File DataObjects');
+        $output->writeln('Pruning all deleted File DataObjects');
 
         $query = new SQLSelect();
         $query->setSelect(['RecordID']);
@@ -165,7 +192,7 @@ class TruncateVersionsTask extends BuildTask
         }
 
         if (!count($to_delete)) {
-            DB::alteration_message('Completed, pruned 0 File records');
+            $output->writeln('Completed, pruned 0 File records');
 
             return;
         }
@@ -179,7 +206,7 @@ class TruncateVersionsTask extends BuildTask
 
         $deleted = DB::affected_rows();
 
-        DB::alteration_message("Completed, pruned {$deleted} File records");
+        $output->writeln("Completed, pruned {$deleted} File records");
     }
 
     /**
@@ -187,9 +214,9 @@ class TruncateVersionsTask extends BuildTask
      *
      * @return void
      */
-    private function reset()
+    private function reset(PolyOutput $output)
     {
-        DB::alteration_message('Pruning all published records');
+        $output->writeln('Pruning all published records');
 
         $classes = $this->getAllVersionedDataClasses();
 
@@ -211,14 +238,14 @@ class TruncateVersionsTask extends BuildTask
             }
 
             if ($deleted > 0) {
-                DB::alteration_message("Deleted {$deleted} versioned {$class} records");
+                $output->writeln("Deleted {$deleted} versioned {$class} records");
                 $total += $deleted;
             }
         }
 
-        DB::alteration_message("Completed, pruned {$total} records");
+        $output->writeln("Completed, pruned {$total} records");
 
-        $this->pruneDeletedFileVersions();
+        $this->pruneDeletedFileVersions($output);
     }
 
     /**
@@ -226,11 +253,11 @@ class TruncateVersionsTask extends BuildTask
      *
      * @return void
      */
-    private function deleteArchivedDataObjects()
+    private function deleteArchivedDataObjects(PolyOutput $output)
     {
         $total = 0;
 
-        DB::alteration_message('Deleting all archived DataObjects');
+        $output->writeln('Deleting all archived DataObjects');
 
         $classes = $this->getAllVersionedDataClasses();
 
@@ -273,12 +300,12 @@ class TruncateVersionsTask extends BuildTask
             }
 
             if ($deleted > 0) {
-                DB::alteration_message("Deleted {$deleted} archived {$class} records");
+                $output->writeln("Deleted {$deleted} archived {$class} records");
                 $total += $deleted;
             }
         }
 
-        DB::alteration_message("Completed, deleted {$total} archived DataObjects");
+        $output->writeln("Completed, deleted {$total} archived DataObjects");
     }
 
     /**

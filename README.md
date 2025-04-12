@@ -14,24 +14,27 @@ When a record is being edited (such as a Page), no changes are made until it is 
 
 ## Tasks
 
-The module adds three manual tasks to:
+The module adds four manual tasks to:
 
 1. Force a run over the entire database - this task is generally not needed unless you either just install the module and wish to tidy up, or change your DataObject configurations.
 2. Silverstripe does not currently delete any File records once the file had been physically deleted (probably due to the immediate post-delete functionality relating to internal file linking). I cannot see any purpose of keeping these records after this, so this task will remove all records pertaining to deleted files/folders.
 3. Force a "reset", keeping only the latest published version of each currently published DataObject (regardless of policy). Unpublished / modified DataObjects are not touched.
 4. Delete all archived DataObjects.
 
-The tasks can be run via `/dev/tasks/TruncateVersionsTask`.
+The tasks can be run in your browser via `/dev/tasks/TruncateVersionsTask`,
+or see `sake tasks:TruncateVersionsTask --help` for CLI options.
 
 
 ## Requirements
 
-* Silverstripe ^4.5 || ^5.0
+* Silverstripe ^6.0
 
 
 ## Installation
 
 `composer require axllent/silverstripe-version-truncator`
+
+Please see the `3` branch for Silverstripe 4 & 5.
 
 
 ## Configuration
